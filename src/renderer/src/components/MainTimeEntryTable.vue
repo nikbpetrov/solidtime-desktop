@@ -226,6 +226,24 @@ onMounted(async () => {
             stopTimer()
         })
     })
+    await listenForBackendEvent('toggleTimer', () => {
+        if (isActive.value) {
+            nextTick(() => {
+                stopTimer()
+            })
+        } else {
+            // same as startTimer above
+            if (lastTimeEntry.value) {
+                currentTimeEntry.value.project_id = lastTimeEntry.value.project_id
+                currentTimeEntry.value.task_id = lastTimeEntry.value.task_id
+                currentTimeEntry.value.description = lastTimeEntry.value.description
+                currentTimeEntry.value.tags = lastTimeEntry.value.tags
+                currentTimeEntry.value.start = dayjs().utc().format()
+            }
+            createTimeEntry(currentTimeEntry.value)
+            startLiveTimer()
+        }
+    })
 })
 
 const projectCreateMutation = useProjectCreateMutation()
@@ -308,6 +326,37 @@ const canCreateProjects = computed(() => {
 })
 
 const showManualTimeEntryModal = ref(false)
+
+// Compute the total time (in ms) for entries started in the current week.
+const totalTimeThisWeek = computed(() => {
+    if (!timeEntries.value) return 0;
+    // Get the start of the current week.
+    const startOfWeek = dayjs().startOf('week'); // or use startOf('isoWeek') if desired
+    let total = 0;
+    timeEntries.value.forEach((entry) => {
+        if (entry.start && entry.end) {
+            const entryStart = dayjs(entry.start);
+            const entryEnd = dayjs(entry.end);
+            // Only include entries that started this week.
+            if (entryStart.isAfter(startOfWeek) || entryStart.isSame(startOfWeek)) {
+                total += entryEnd.diff(entryStart);
+            }
+        }
+    });
+    return total;
+});
+
+// Helper function to format milliseconds into "Xh Ym".
+function formatDuration(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+}
+
+// Computed formatted total time.
+const totalTimeFormatted = computed(() => formatDuration(totalTimeThisWeek.value));
+
 </script>
 
 <template>
@@ -371,6 +420,9 @@ const showManualTimeEntryModal = ref(false)
                         :tags
                         :clients></TimeEntryCreateModal>
                 </div>
+            </div>
+            <div class="pl-4 text-sm text-center py-2 text-white bg-secondary">
+                This Week: <strong>{{ totalTimeFormatted }}</strong>
             </div>
             <div class="overflow-y-scroll w-full flex-1">
                 <TimeEntryMassActionRow

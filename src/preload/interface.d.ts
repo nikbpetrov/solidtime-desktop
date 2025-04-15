@@ -13,6 +13,7 @@ export interface IElectronAPI {
     onAutoUpdaterError: (callback: (error: string | undefined) => Promise<void>) => void
     onStartTimer: (callback: () => void) => void
     onStopTimer: (callback: () => void) => void
+    onToggleTimer: (callback: () => void) => void
     updateTrayState: (timeEntry: string) => void
     updateAutoUpdater: () => void
 }

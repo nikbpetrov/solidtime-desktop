@@ -77,7 +77,8 @@ export async function initializeAuth(queryClient: QueryClient) {
                     code: accessCode,
                 }
 
-                const response = await fetch(endpoint.value + '/oauth/token', {
+                const apiBase = import.meta.env.DEV ? '' : endpoint.value;
+                const response = await fetch(apiBase + '/oauth/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

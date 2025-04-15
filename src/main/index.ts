@@ -10,6 +10,7 @@ import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
 import * as Sentry from '@sentry/electron/main'
 import path from 'node:path'
+import { globalShortcut } from 'electron'
 
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
@@ -32,9 +33,11 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient('solidtime')
 }
 
+let mainWindow: BrowserWindow  // Declare in outer scope
+
 function createWindow(): void {
     // Create the browser window.
-    const mainWindow = initializeMainWindow(icon)
+    mainWindow = initializeMainWindow(icon)
     registerMainWindowListeners(mainWindow)
     registerDeeplinkListeners(mainWindow)
     registerAutoUpdateListeners(mainWindow)
@@ -83,6 +86,26 @@ app.whenReady().then(() => {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+
+    const shortcutToggleVisibility = process.platform === 'darwin' ? 'Option+Command+C' : 'Alt+Ctrl+C';
+    globalShortcut.register(shortcutToggleVisibility, () => {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide()
+        } else {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+    })
+
+    const shortcutToggleTimer = process.platform === 'darwin' ? 'Option+Command+T' : 'Alt+Ctrl+T';
+    globalShortcut.register(shortcutToggleTimer, () => {
+        // This mimics the tray Continue/Stop logic
+        mainWindow.webContents.send('toggleTimer')
+    })
+      
+    app.on('will-quit', () => {
+        globalShortcut.unregisterAll()
     })
 })
 

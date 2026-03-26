@@ -1,10 +1,18 @@
-import { app, BrowserWindow, ipcMain, dialog, systemPreferences, desktopCapturer } from 'electron'
+import {
+    app,
+    BrowserWindow,
+    ipcMain,
+    dialog,
+    systemPreferences,
+    desktopCapturer,
+    globalShortcut,
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
 import { initializeAutoUpdater, registerAutoUpdateListeners } from './autoUpdater'
 import { initializeTray, registerTrayListeners } from './tray'
-import { initializeMainWindow, registerMainWindowListeners } from './mainWindow'
+import { initializeMainWindow, registerMainWindowListeners, getMainWindow } from './mainWindow'
 import { initializeMiniWindow, registerMiniWindowListeners } from './miniWindow'
 import { registerDeeplinkListeners } from './deeplink'
 import { registerVueDevTools } from './devtools'
@@ -179,6 +187,29 @@ app.whenReady().then(async () => {
     await initializeIdleMonitor()
     await initializeActivityTracker()
 
+    // Global keyboard shortcuts
+    const shortcutToggleVisibility =
+        process.platform === 'darwin' ? 'Option+Command+C' : 'Alt+Ctrl+C'
+    globalShortcut.register(shortcutToggleVisibility, () => {
+        const win = getMainWindow()
+        if (win) {
+            if (win.isVisible()) {
+                win.hide()
+            } else {
+                win.show()
+                win.focus()
+            }
+        }
+    })
+
+    const shortcutToggleTimer = process.platform === 'darwin' ? 'Option+Command+T' : 'Alt+Ctrl+T'
+    globalShortcut.register(shortcutToggleTimer, () => {
+        const win = getMainWindow()
+        if (win) {
+            win.webContents.send('toggleTimer')
+        }
+    })
+
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
@@ -222,7 +253,7 @@ app.on('before-quit', async (event) => {
         console.error('Error saving active periods on quit:', error)
         // Continue with quit even if save fails
     } finally {
-        // Now allow the app to quit
+        globalShortcut.unregisterAll()
         app.exit(0)
     }
 })

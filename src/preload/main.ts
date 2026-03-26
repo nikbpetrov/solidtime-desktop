@@ -17,6 +17,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.on('startTimer', (_event, value) => callback(value)),
             onStopTimer: (callback) =>
                 ipcRenderer.on('stopTimer', (_event, value) => callback(value)),
+            onToggleTimer: (callback) =>
+                ipcRenderer.on('toggleTimer', (_event, value) => callback(value)),
             onOpenDeeplink: (callback) =>
                 ipcRenderer.on('openDeeplink', (_event, value) => callback(value)),
             showMiniWindow: () => ipcRenderer.send('showMiniWindow'),

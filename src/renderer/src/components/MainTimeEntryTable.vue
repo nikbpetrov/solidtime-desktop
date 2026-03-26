@@ -50,6 +50,7 @@ import { useTimer, getLastWorkTimeEntry } from '../utils/useTimer.ts'
 import { useBreaksEnabled } from '../utils/organization.ts'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
+import { listenForBackendEvent } from '../utils/events.ts'
 
 // Same as the ui package's TimeTrackerMode, which is not exported from its index
 type TimeTrackerMode = 'project' | 'simple'
@@ -69,6 +70,7 @@ const {
     startTimer,
     startBreak,
     resumeWorkAfterBreak,
+    continueLastTimer,
     timeEntryCreate,
 } = useTimer()
 
@@ -274,6 +276,14 @@ watchEffect(() => {
 
 onMounted(async () => {
     liveTimer.value = dayjs().utc()
+    await listenForBackendEvent('toggleTimer', () => {
+        if (isActive.value) {
+            stopTimer()
+        } else {
+            continueLastTimer()
+            startLiveTimer()
+        }
+    })
 })
 
 function updateCurrentTimeEntry() {
@@ -370,6 +380,32 @@ watch(isLoadMoreVisible, async (isVisible) => {
         await fetchNextPage()
     }
 })
+
+// "This Week" time summary
+const totalTimeThisWeek = computed(() => {
+    if (!timeEntries.value) return 0
+    const startOfWeek = dayjs().startOf('week')
+    let total = 0
+    timeEntries.value.forEach((entry) => {
+        if (entry.start && entry.end) {
+            const entryStart = dayjs(entry.start)
+            const entryEnd = dayjs(entry.end)
+            if (entryStart.isAfter(startOfWeek) || entryStart.isSame(startOfWeek)) {
+                total += entryEnd.diff(entryStart)
+            }
+        }
+    })
+    return total
+})
+
+function formatDuration(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    return `${hours}h ${minutes}m`
+}
+
+const totalTimeFormatted = computed(() => formatDuration(totalTimeThisWeek.value))
 </script>
 
 <template>
@@ -445,6 +481,9 @@ watch(isLoadMoreVisible, async (isVisible) => {
                         :tags
                         :clients></TimeEntryCreateModal>
                 </div>
+            </div>
+            <div class="pl-4 text-sm text-center py-2 text-white bg-secondary">
+                This Week: <strong>{{ totalTimeFormatted }}</strong>
             </div>
             <div class="overflow-y-scroll w-full flex-1">
                 <TimeEntryMassActionRow

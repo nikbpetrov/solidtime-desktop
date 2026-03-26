@@ -71,6 +71,7 @@ export interface IElectronAPI {
     onStopTimer: (callback: () => void) => void
     onStartBreak: (callback: () => void) => void
     onResumeAfterBreak: (callback: () => void) => void
+    onToggleTimer: (callback: () => void) => void
     updateTrayState: (timeEntry: string, showTimer: boolean) => void
     updateAutoUpdater: () => void
     updateUpdateChannel: (channel: UpdateChannel) => Promise<{ success: boolean; error?: string }>

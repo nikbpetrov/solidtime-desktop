@@ -1,4 +1,12 @@
-import { app, BrowserWindow, ipcMain, dialog, systemPreferences, desktopCapturer } from 'electron'
+import {
+    app,
+    BrowserWindow,
+    ipcMain,
+    dialog,
+    systemPreferences,
+    desktopCapturer,
+    globalShortcut,
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/linux_icon.png?asset'
@@ -215,6 +223,29 @@ app.whenReady().then(async () => {
     await initializeIdleMonitor()
     await initializeActivityTracker()
 
+    // Global keyboard shortcuts
+    const shortcutToggleVisibility =
+        process.platform === 'darwin' ? 'Option+Command+C' : 'Alt+Ctrl+C'
+    globalShortcut.register(shortcutToggleVisibility, () => {
+        const win = getMainWindow()
+        if (win) {
+            if (win.isVisible()) {
+                win.hide()
+            } else {
+                win.show()
+                win.focus()
+            }
+        }
+    })
+
+    const shortcutToggleTimer = process.platform === 'darwin' ? 'Option+Command+T' : 'Alt+Ctrl+T'
+    globalShortcut.register(shortcutToggleTimer, () => {
+        const win = getMainWindow()
+        if (win) {
+            win.webContents.send('toggleTimer')
+        }
+    })
+
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
@@ -257,6 +288,7 @@ app.on('before-quit', (event) => {
             console.error('Error saving active periods on quit:', error)
         })
         .finally(() => {
+            globalShortcut.unregisterAll()
             saveCompleted = true
             // Let the prevented before-quit attempt unwind before resuming quit.
             setImmediate(() => app.quit())

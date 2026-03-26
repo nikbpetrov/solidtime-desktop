@@ -21,6 +21,8 @@ if (process.contextIsolated || true) {
                 ipcRenderer.on('startBreak', (_event, value) => callback(value)),
             onResumeAfterBreak: (callback) =>
                 ipcRenderer.on('resumeAfterBreak', (_event, value) => callback(value)),
+            onToggleTimer: (callback) =>
+                ipcRenderer.on('toggleTimer', (_event, value) => callback(value)),
             onOpenDeeplink: (callback) =>
                 ipcRenderer.on('openDeeplink', (_event, value) => callback(value)),
             showMiniWindow: () => ipcRenderer.send('showMiniWindow'),

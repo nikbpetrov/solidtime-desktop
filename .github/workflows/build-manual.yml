@@ -1,0 +1,59 @@
+name: Build (manual)
+
+on:
+    workflow_dispatch:
+        inputs:
+            platform:
+                description: 'Platform to build for'
+                required: true
+                type: choice
+                options:
+                    - mac
+                    - linux
+                    - windows
+
+jobs:
+    build:
+        runs-on: ${{ inputs.platform == 'mac' && 'macos-latest' || inputs.platform == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
+
+        steps:
+            - name: Check out Git repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
+            - name: Set version from latest git tag
+              shell: bash
+              run: |
+                  VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+                  echo "Setting version to $VERSION"
+                  npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Build app (skip typecheck)
+              run: npx electron-vite build
+
+            - name: Package with electron-builder
+              run: npx electron-builder --${{ inputs.platform }} --publish never
+              env:
+                  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: solidtime-${{ inputs.platform }}
+                  path: |
+                      dist/*.dmg
+                      dist/*.zip
+                      dist/*.deb
+                      dist/*.rpm
+                      dist/*.tar.gz
+                      dist/*.exe
+                      dist/*.AppImage

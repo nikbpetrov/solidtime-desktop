@@ -12,3 +12,13 @@ out
 
 # Playwright output (debug screenshots, failure artifacts)
 test-results/
+
+# Claude Code
+.claude
+
+# Build artifacts
+solidtime-linux*
+solidtime-mac*
+solidtime-windows*
+*.deb
+*.rpm

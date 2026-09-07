@@ -6,6 +6,7 @@ import { ipcMain, powerMonitor } from 'electron'
 import { logger } from './logger'
 import {
     isSameWindowActivity,
+    isUnidentifiedWindow,
     isUntitledOverlayOfSameApp,
     type ActivityBackend,
     type WindowInfo,
@@ -204,6 +205,22 @@ export async function startActivityTracking(): Promise<void> {
     }
 }
 
+/** Saves the current activity, if any, and forgets the current window. */
+async function closeCurrentActivity(): Promise<void> {
+    const windowInfo = lastWindowInfo
+    const startTime = currentActivityStartTime
+    lastWindowInfo = null
+    currentActivityStartTime = null
+
+    if (windowInfo && startTime && !trackingPaused && activityTrackingEnabled) {
+        try {
+            await saveWindowActivity(windowInfo, startTime, new Date())
+        } catch (error) {
+            logger.error('Failed to save window activity on unidentified window:', error)
+        }
+    }
+}
+
 /**
  * Invoked by the active backend every time the focused window changes.
  *
@@ -213,6 +230,13 @@ export async function startActivityTracking(): Promise<void> {
  * phantom activity.
  */
 async function handleWindowChange(windowInfo: WindowInfo): Promise<void> {
+    // Windows without an owning app (e.g. the macOS lock screen) close the current
+    // activity and are never tracked themselves.
+    if (isUnidentifiedWindow(windowInfo)) {
+        await closeCurrentActivity()
+        return
+    }
+
     // Keep attributing time to the current titled window when an untitled
     // window of the same app slides in front of it (issue #133).
     if (lastWindowInfo && isUntitledOverlayOfSameApp(lastWindowInfo, windowInfo)) {

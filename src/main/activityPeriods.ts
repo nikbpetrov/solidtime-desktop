@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { db } from './db/client'
 import { activityPeriods, windowActivities } from './db/schema'
-import { gte, lte, and } from 'drizzle-orm'
+import { and, gte, lte, ne } from 'drizzle-orm'
 import * as Sentry from '@sentry/electron/main'
 import { getCurrentActivityPeriod } from './idleMonitor'
 
@@ -101,6 +101,8 @@ interface RawWindowActivity {
 
 /**
  * Fetches all window activities in the given date range in a single query.
+ * Rows without an identified app ("Unknown", e.g. the macOS lock screen)
+ * are excluded, matching the statistics aggregation.
  */
 async function fetchAllWindowActivitiesInRange(
     startDate: string,
@@ -119,7 +121,8 @@ async function fetchAllWindowActivitiesInRange(
             .where(
                 and(
                     gte(windowActivities.end, toUtcIso(startDate)),
-                    lte(windowActivities.timestamp, toUtcIso(endDate))
+                    lte(windowActivities.timestamp, toUtcIso(endDate)),
+                    ne(windowActivities.appName, 'Unknown')
                 )
             )
 

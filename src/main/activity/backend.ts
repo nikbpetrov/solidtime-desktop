@@ -74,6 +74,16 @@ export function isUntitledOverlayOfSameApp(previous: WindowInfo, next: WindowInf
     )
 }
 
+/**
+ * True when the snapshot has no owning process, app name, or executable.
+ * x-win reports the macOS lock screen this way, and saving such snapshots
+ * produces "Unknown"/"Untitled" rows covering the time between waking the
+ * machine and unlocking it.
+ */
+export function isUnidentifiedWindow(window: WindowInfo): boolean {
+    return !window.info.name && !window.info.execName && !window.info.processId
+}
+
 export interface ActivityBackend {
     /**
      * Start tracking. The handler is invoked every time the focused window
